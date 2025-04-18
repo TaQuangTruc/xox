@@ -2,13 +2,14 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Patient } from 'src/database/entities/patient.entity';
 import { Repository } from 'typeorm';
 import { CreatePatientDto } from './dto/createPatient.dto';
 import { UpdatePatientDto } from './dto/updatePatient.dto';
-import { ResponseFormatter } from 'src/common/formatters/response.formatter';
+import { FieldSearchDto, QuickSearchDto } from './dto/quickSearch.dto';
 
 @Injectable()
 export class PatientService {
@@ -17,54 +18,83 @@ export class PatientService {
     private repository: Repository<Patient>,
   ) {}
 
-  async create(
-    createDto: CreatePatientDto,
-  ): Promise<ApiResponse<Patient | null>> {
-    try {
-      const existingUser = await this.repository.findOne({
-        where: { phoneNumber: createDto.phoneNumber },
+  async create(createDto: CreatePatientDto) {
+    const existingUser = await this.repository.findOne({
+      where: { phoneNumber: createDto.phoneNumber },
+    });
+    if (existingUser) {
+      throw new BadRequestException({
+        message: 'Validation failed',
+        errors: [
+          {
+            field: 'phoneNumber',
+            errors: ['Số điện thoại đã được sử dụng'],
+          },
+        ],
       });
-      if (existingUser) {
-        return ResponseFormatter.error('Patient not found.');
-      }
+    }
 
+    try {
       const patient = this.repository.create({
         ...createDto,
         dateOfBirth: new Date(createDto.dateOfBirth),
       });
 
-      return ResponseFormatter.success(
-        'Patient created successfully.',
-        patient,
-      );
+      await this.repository.save(patient);
+      return {
+        message: 'Tạo bệnh nhân thành công',
+        data: patient,
+      };
     } catch (error) {
-      return ResponseFormatter.error('Failed to create patient.', [
-        error.message,
-      ]);
+      throw new BadRequestException({
+        message: 'Xảy ra lỗi khi tạo bệnh nhân mới',
+        errors: [
+          {
+            field: 'patien',
+            errors: error,
+          },
+        ],
+      });
     }
   }
 
-  async findAll(): Promise<ApiResponse<Patient[] | null>> {
-    const patients = await this.repository.find();
-    return ResponseFormatter.success('Patients found successfully.', patients);
-  }
+  // async findAll() {
+  //   const patients = await this.repository.find();
+  //   return patients
+  // }
 
-  async findOne(id: string): Promise<ApiResponse<Patient | null>> {
+  async findOne(id: string) {
     const patient = await this.repository.findOne({ where: { id } });
     if (!patient) {
-      return ResponseFormatter.error('Patient not found.');
+      throw new BadRequestException({
+        message: 'Patient not found',
+        errors: [
+          {
+            field: 'id',
+            errors: [`Không tồn tại bệnh nhân với id: ${id}`],
+          },
+        ],
+      });
     }
-    return ResponseFormatter.success('Patient found successfully.', patient);
+    return {
+      message: 'Lấy thông tin bệnh nhân thành công',
+      data: patient,
+    };
   }
 
-  async update(
-    id: string,
-    updateDto: UpdatePatientDto,
-  ): Promise<ApiResponse<Patient | null>> {
+  async update(id: string, updateDto: UpdatePatientDto) {
     const patient = await this.repository.findOne({ where: { id } });
 
     if (!patient) {
-      return ResponseFormatter.error('Patient not found.');
+      throw new BadRequestException({
+        message: 'Patient not found',
+        errors: [
+          {
+            field: 'id',
+            errors: [`Không tồn tại bệnh nhân với id: ${id}`],
+          },
+        ],
+      });
     }
 
     if (updateDto.phoneNumber) {
@@ -73,7 +103,15 @@ export class PatientService {
       });
 
       if (existingUser && existingUser.id !== id) {
-        return ResponseFormatter.error('Số điện thoại đã tồn tại');
+        throw new BadRequestException({
+          message: 'Validation failed',
+          errors: [
+            {
+              field: 'phoneNumber',
+              errors: ['Số điện thoại đã được sử dụng'],
+            },
+          ],
+        });
       }
     }
 
@@ -84,23 +122,145 @@ export class PatientService {
         : patient.dateOfBirth,
     });
 
-    const updatedPatient: Patient = await this.repository.save(patient);
+    try {
+      await this.repository.save(patient);
 
-    return ResponseFormatter.success(
-      'Patient updated successfully.',
-      updatedPatient,
-    );
+      return {
+        message: 'Cập nhật thông tin bệnh nhân thành công',
+        patient,
+      };
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException({
+        message: 'Xảy ra lỗi khi cập nhật thông tin bệnh nhân',
+        errors: [
+          {
+            field: 'update',
+            errors: [`Xảy ra lỗi khi update`],
+          },
+        ],
+      });
+    }
+
   }
 
-  async remove(id: string): Promise<ApiResponse<void | null>> {
+  async remove(id: string) {
     const patient = await this.repository.findOne({ where: { id } });
 
     if (!patient) {
-      return ResponseFormatter.error('Patient not found.');
+      throw new BadRequestException({
+        message: 'Patient not found',
+        errors: [
+          {
+            field: 'id',
+            errors: [`Không tồn tại bệnh nhân với id: ${id}`],
+          },
+        ],
+      });
     }
 
     await this.repository.remove(patient);
 
-    return ResponseFormatter.success('Patient deleted successfully', null);
+    return {
+      message: 'Xóa thông tin bệnh nhân thành công',
+      data: patient,
+    };
+  }
+
+  async quickSearch(query: QuickSearchDto) {
+    const nameEntity = 'patient'
+    const { quickSearch, pagination } = query;
+    const { page = 1, limit = 10 } = pagination || {}; // Phân trang mặc định là 1 và 10 nếu không có
+
+    // Kiểm tra các tham số đầu vào
+    // if (!quickSearch) {
+    //   throw new BadRequestException({
+    //     message: 'QuickSearch not defined',
+    //     errors: [
+    //       {
+    //         field: 'quickSearch',
+    //         errors: [`QuickSearch không tồn tại`],
+    //       },
+    //     ],
+    //   });
+    // }
+
+    // Lọc các search conditions hợp lệ (fieldname, fieldop, fieldvalue không rỗng)
+    const validSearchConditions =
+      quickSearch?.filter(
+        (search: FieldSearchDto) =>
+          search.fieldname && search.fieldvalue && search.fieldop,
+      ) || [];
+
+    // Nếu không có điều kiện tìm kiếm hợp lệ thì không thêm bất kỳ điều kiện nào vào query
+    const queryBuilder = this.repository.createQueryBuilder(nameEntity);
+
+    // Nếu không có valid search conditions, trả về toàn bộ danh sách mà không có điều kiện
+    if (validSearchConditions?.length === 0) {
+      queryBuilder.skip((page - 1) * limit).take(limit); // Phân trang
+      const result = await queryBuilder.getMany();
+      const total = await queryBuilder.getCount();
+
+      return {
+        message: 'Lấy danh sách bệnh nhân thành công',
+        data: result,
+        meta: {
+          pagination: {
+            page,
+            limit,
+            totalItems: total,
+            totalPages: Math.ceil(total / limit),
+          },
+        },
+      };
+    }
+
+    // Thêm các điều kiện tìm kiếm động chỉ khi có điều kiện hợp lệ
+    validSearchConditions.forEach((search: FieldSearchDto) => {
+      const { fieldname, fieldop, fieldvalue } = search;
+
+      if (fieldop === 'LIKE') {
+        queryBuilder.andWhere(`${nameEntity}.${fieldname} LIKE :fieldvalue`, {
+          fieldvalue: `%${fieldvalue}%`,
+        });
+      } else if (fieldop === 'EQUAL') {
+        queryBuilder.andWhere(`${nameEntity}.${fieldname} = :fieldvalue`, {
+          fieldvalue,
+        });
+      }
+    });
+
+    // Phân trang
+    queryBuilder.skip((page - 1) * limit).take(limit);
+
+    // Thực hiện tìm kiếm
+    try {
+      const result = await queryBuilder.getMany();
+      const total = await queryBuilder.getCount(); // Đếm tổng số kết quả
+
+      return {
+        message: 'Lấy danh sách nhân viên thành công',
+        data: result,
+        meta: {
+          pagination: {
+            page,
+            limit,
+            totalItems: total,
+            totalPages: Math.ceil(total / limit),
+          },
+        },
+      };
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException({
+        message: 'Xảy ra lỗi khi tìm bệnh nhân',
+        errors: [
+          {
+            field: 'quickSearch',
+            errors: [`Xảy ra lỗi khi quickSearch`],
+          },
+        ],
+      });
+    }
   }
 }
