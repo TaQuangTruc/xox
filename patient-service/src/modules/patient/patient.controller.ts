@@ -13,6 +13,7 @@ import { PatientService } from './patient.service';
 import { CreatePatientDto } from './dto/createPatient.dto';
 import { Patient } from 'src/database/entities/patient.entity';
 import { UpdatePatientDto } from './dto/updatePatient.dto';
+import { QuickSearchDto } from './dto/quickSearch.dto';
 
 @Controller('patients')
 export class PatientController {
@@ -25,8 +26,8 @@ export class PatientController {
   }
 
   @Get()
-  findAll() {
-    return this.patientService.findAll();
+  quickSearch(@Body() quickSearchDto: QuickSearchDto) {
+    return this.patientService.quickSearch(quickSearchDto);
   }
 
   @Get(':id')
@@ -36,15 +37,12 @@ export class PatientController {
 
   @Patch(':id')
   @UsePipes(new ValidationPipe({ transform: true }))
-  update(
-    @Param('id') id: string,
-    @Body() updateDto: UpdatePatientDto,
-  ){
+  update(@Param('id') id: string, @Body() updateDto: UpdatePatientDto) {
     return this.patientService.update(id, updateDto);
   }
 
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.patientService.remove(id);
-  // }
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.patientService.remove(id);
+  }
 }

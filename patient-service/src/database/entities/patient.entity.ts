@@ -8,7 +8,7 @@ import {
 import { IsEnum } from 'class-validator';
 import { Gender } from 'src/common/enums';
 
-@Entity()
+@Entity('patient')
 export class Patient {
   @PrimaryGeneratedColumn('uuid')
   id: string;
