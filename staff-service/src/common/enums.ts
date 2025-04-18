@@ -4,16 +4,14 @@ export enum Gender {
   OTHER = 'Khác',
 }
 
-// Enum Role
-export enum Role {
-  Doctor = 'Doctor',
-  Nurse = 'Nurse',
+export enum StaffRole {
+  Doctor = 'Bác sĩ',
+  Nurse = 'Y tá',
   Admin = 'Admin',
-  Technician = 'Technician',
+  Technician = 'Nhân viên kỹ thuật',
 }
 
-// Enum Specialty
-export enum Specialty {
+export enum StaffSpecialty {
   InternalMedicine = 'Nội',
   Surgery = 'Ngoại',
   Pediatrics = 'Nhi',
@@ -22,22 +20,24 @@ export enum Specialty {
   Other = 'Khác',
 }
 
-// Enum ShiftType
-export enum ShiftType {
-  Morning = 'Morning',
-  Afternoon = 'Afternoon',
-  Evening = 'Evening',
-  Night = 'Night',
-  Off = 'Off',
+export enum StaffStatus {
+  PA = 'Pending Active',     // Chờ hoạt động
+  A = 'Active',              // Hoạt động
+  I = 'Inactive',            // Đã nghỉ làm
+  L = 'Long Leave',          // Nghỉ dài hạn
+  S = 'Short Leave'          // Nghỉ ngắn hạn
 }
 
-// Enum DayOfWeek
-export enum DayOfWeek {
-  Monday = 'Monday',
-  Tuesday = 'Tuesday',
-  Wednesday = 'Wednesday',
-  Thursday = 'Thursday',
-  Friday = 'Friday',
-  Saturday = 'Saturday',
-  Sunday = 'Sunday',
+export enum FieldOperator {
+  LIKE = 'LIKE',
+  EQUAL = 'EQUAL',
 }
+
+export enum RepeatType {
+  DAILY = 'daily',
+  WEEKLY = 'weekly',
+  MONTHLY = 'monthly',
+  // Các loại lặp khác nếu cần
+}
+
+

@@ -11,8 +11,8 @@ import {
 } from '@nestjs/common';
 import { StaffService } from './staff.service';
 import { CreateStaffDto } from './dto/createStaff.dto';
-import { Staff } from 'src/database/entities/staff.entity';
 import { UpdateStaffDto } from './dto/updateStaff.dto';
+import { QuickSearchDto } from './dto/quickSearch.dto';
 
 @Controller('staffs')
 export class StaffController {
@@ -25,8 +25,8 @@ export class StaffController {
   }
 
   @Get()
-  findAll() {
-    return this.staffService.findAll();
+  quickSearch(@Body() quickSearchDto: QuickSearchDto) {
+    return this.staffService.quickSearch(quickSearchDto);
   }
 
   @Get(':id')

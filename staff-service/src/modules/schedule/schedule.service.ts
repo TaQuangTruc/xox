@@ -1,83 +1,166 @@
 import {
-  Injectable,
-  ConflictException,
-  NotFoundException,
   BadRequestException,
+  Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Schedule } from 'src/database/entities/schedule.entity';
+import { WorkSchedule } from 'src/database/entities/work-schedule.entity';
+import { Between, Raw, Repository } from 'typeorm';
+import { CreateWorkScheduleDto } from './dto/create-schedule.dto';
+import { UpdateWorkScheduleDto } from './dto/update-schedule.dto';
 import { Staff } from 'src/database/entities/staff.entity';
-import { Repository, Between, Not } from 'typeorm';
-import { CreateScheduleDto } from './dto/create-schedule.dto';
-import { UpdateScheduleDto } from './dto/update-schedule.dto';
+import { QuickSearchWorkScheduleDto } from './dto/quick-search.dto';
+import * as dayjs from 'dayjs';
+
 
 @Injectable()
-export class ScheduleService {
+export class WorkScheduleService {
   constructor(
-    @InjectRepository(Schedule)
-    private scheduleRepository: Repository<Schedule>,
+    @InjectRepository(WorkSchedule)
+    private readonly workScheduleRepo: Repository<WorkSchedule>,
+
     @InjectRepository(Staff)
-    private staffRepository: Repository<Staff>,
+    private readonly staffRepo: Repository<Staff>,
   ) {}
 
-  // Schedule (Lịch làm việc thực tế)
-  async create(createScheduleDto: CreateScheduleDto): Promise<Schedule> {
-    const { staffId, startTime, endTime } = createScheduleDto;
+  async create(staffId: string, dto: CreateWorkScheduleDto) {
+    const staff = await this.staffRepo.findOne({ where: { id: staffId } });
 
-    const staff = await this.staffRepository.findOne({
-      where: { id: staffId },
-    });
     if (!staff) {
-      throw new NotFoundException('Nhân viên không tồn tại');
+      if (!staff) {
+        throw new BadRequestException({
+          message: 'Staff not found',
+          errors: [
+            {
+              field: 'staffId',
+              errors: [`Không tồn tại nhân viên với id: ${staffId}`],
+            },
+          ],
+        });
+      }
     }
 
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    if (end <= start) {
-      throw new BadRequestException(
-        'Thời gian kết thúc phải sau thời gian bắt đầu',
-      );
-    }
-
-    const conflict = await this.scheduleRepository.findOne({
-      where: {
-        staff: { id: staffId },
-        startTime: Between(start, end),
-        endTime: Between(start, end),
-      },
-    });
-    if (conflict) {
-      throw new ConflictException(
-        'Nhân viên đã có ca làm việc trong khoảng thời gian này',
-      );
-    }
-
-    const schedule = this.scheduleRepository.create({
-      ...createScheduleDto,
+    const schedule = this.workScheduleRepo.create({
+      ...dto,
       staff,
-      startTime: start,
-      endTime: end,
     });
-    return this.scheduleRepository.save(schedule);
+
+    await this.workScheduleRepo.save(schedule);
+
+    return {
+      message: 'Tạo lịch thành công',
+      data: schedule,
+    };
   }
 
-  async findAllSchedules(): Promise<Schedule[]> {
-    return this.scheduleRepository.find({ relations: ['staff'] });
+  async findAll() {
+    const schedules = await this.workScheduleRepo.find({
+      relations: ['staff'],
+      order: { startTime: 'ASC' },
+    });
+
+    return {
+      message: 'Lấy tất cả lịch thành công',
+      data: schedules,
+    };
   }
 
-  async findOneSchedule(id: string): Promise<Schedule> {
-    const schedule = await this.scheduleRepository.findOne({
+  async findOne(id: number) {
+    const schedule = await this.workScheduleRepo.findOne({
       where: { id },
       relations: ['staff'],
     });
+
     if (!schedule) {
-      throw new NotFoundException('Không tìm thấy lịch làm việc');
+      throw new BadRequestException({
+        message: 'Schedule not found',
+        errors: [
+          {
+            field: 'scheduleId',
+            errors: [`Không tồn tại lịch làm việc với id: ${id}`],
+          },
+        ],
+      });
     }
-    return schedule;
+
+    return {
+      message: 'Lấy thông tin lịch làm việc thành công',
+      data: schedule,
+    };
   }
 
-  async removeSchedule(id: string): Promise<void> {
-    const schedule = await this.findOneSchedule(id);
-    await this.scheduleRepository.remove(schedule);
+  async update(id: number, dto: UpdateWorkScheduleDto) {
+    const schedule = await this.workScheduleRepo.findOneBy({ id });
+
+    if (!schedule) {
+      throw new BadRequestException({
+        message: 'Schedule not found',
+        errors: [
+          {
+            field: 'scheduleId',
+            errors: [`Không tồn tại lịch làm việc với id: ${id}`],
+          },
+        ],
+      });
+    }
+
+    const updated = this.workScheduleRepo.merge(schedule, dto);
+    await this.workScheduleRepo.save(updated);
+
+    return {
+      message: 'Cập nhật thông tin lịch làm việc thành công',
+      data: updated,
+    };
+  }
+
+  async delete(id: number) {
+    const schedule = await this.workScheduleRepo.findOneBy({ id });
+
+    if (!schedule) {
+      throw new BadRequestException({
+        message: 'Schedule not found',
+        errors: [
+          {
+            field: 'scheduleId',
+            errors: [`Không tồn tại lịch làm việc với id: ${id}`],
+          },
+        ],
+      });
+    }
+
+    await this.workScheduleRepo.remove(schedule);
+
+    return { message: 'Xóa lịch làm việc thành công', data: schedule };
+  }
+
+  async quickSearch(staffId: string, dto: QuickSearchWorkScheduleDto) {
+    try {
+      const { fromTime, toTime } = dto;
+
+      // TODO: Parse định dạng 'HH:mm DD/MM/YYYY' sang ISO để so sánh
+      // const from = dayjs(fromTime, 'HH:mm DD/MM/YYYY', true);
+      // const to = dayjs(toTime, 'HH:mm DD/MM/YYYY', true);
+    
+      // if (!from.isValid() || !to.isValid()) {
+      //   throw new BadRequestException('fromTime hoặc toTime không đúng định dạng HH:mm DD/MM/YYYY');
+      // }
+
+      const shedules = await this.workScheduleRepo.find({
+        where: {
+          staffId: staffId,
+          // startTime: Raw((alias) => `${alias} >= :from`, { from }),
+          // endTime: Raw((alias) => `${alias} <= :to`, { to }),
+        },
+        // relations: ['staff'],
+        order: { startTime: 'ASC' },
+      });
+
+      return {
+        messgae: 'Lấy danh sách việc làm của nhân viên thành công',
+        data: shedules,
+      };
+    } catch (error) {
+      console.log(error);
+    }
   }
 }

@@ -1,60 +1,78 @@
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import {
-  Entity,
-  Column,
-  PrimaryGeneratedColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToMany,
-} from 'typeorm';
-import { IsEnum } from 'class-validator';
-import { Schedule } from './schedule.entity';
-import { Role, Specialty } from 'src/common/enums';
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsDateString,
+  IsPhoneNumber,
+  IsEmail,
+  IsUUID,
+} from 'class-validator';
+import { StaffRole, StaffSpecialty, StaffStatus } from 'src/common/enums';
+import { WorkSchedule } from './work-schedule.entity';
 
 @Entity('staff')
 export class Staff {
   @PrimaryGeneratedColumn('uuid')
+  @IsUUID(4, { message: 'ID must be a valid UUID.' })
   id: string;
 
-  @Column({ nullable: false })
-  lastName: string;
+  @Column()
+  @IsString({ message: 'First name must be a string.' })
+  firstname: string;
 
-  @Column({ nullable: false })
-  firstName: string;
+  @Column()
+  @IsString({ message: 'Last name must be a string.' })
+  lastname: string;
 
-  @Column({
-    type: 'enum',
-    enum: Role,
-    nullable: false,
+  @Column()
+  @IsEnum(StaffRole, {
+    message: `Role must be one of the following: ${Object.values(StaffRole).join(', ')}.`,
   })
-  @IsEnum(Role)
-  role: Role;
+  role: StaffRole;
 
-  @Column({
-    type: 'enum',
-    enum: Specialty,
-    nullable: true, // Chỉ bắt buộc với Doctor, validate trong Service
+  @Column()
+  @IsString({ message: 'Identity number must be a string.' })
+  identityNumber: string; // CCCD/CMND/Hộ chiếu
+
+  @Column({ nullable: true })
+  @IsOptional()
+  @IsEnum(StaffSpecialty, {
+    message: `Specialty must be one of the following: ${Object.values(StaffSpecialty).join(', ')}.`,
   })
-  @IsEnum(Specialty)
-  specialty?: Specialty;
+  specialty?: StaffSpecialty; // Bắt buộc với Bác sĩ
 
-  @Column({ name: 'license_number', nullable: true }) // Bắt buộc với Doctor
-  licenseNumber?: string;
+  @Column()
+  @IsString({ message: 'License number must be a string.' })
+  licenseNumber: string; // Mã giấy phép hành nghề
 
-  @Column({ name: 'phone_number', nullable: false, unique: true })
+  @Column()
+  @IsPhoneNumber(undefined, {
+    message: 'Phone number must be a valid phone number.',
+  })
   phoneNumber: string;
 
-  @Column({ nullable: false, unique: true })
+  @Column()
+  @IsEmail({}, { message: 'Email must be a valid email address.' })
   email: string;
 
-  @Column({ name: 'hire_date', type: 'date', nullable: false })
-  hireDate: Date;
+  @Column()
+  @IsDateString(
+    {},
+    { message: 'Hire date must be a valid date in the format YYYY-MM-DD.' },
+  )
+  hireDate: string; // DD/MM/YYYY
 
-  @OneToMany(() => Schedule, (schedule) => schedule.staff)
-  schedules: Schedule[];
+  @Column({
+    type: 'enum',
+    enum: StaffStatus,
+    default: StaffStatus.PA,
+  })
+  @IsEnum(StaffStatus, {
+    message: `Status must be one of the following: ${Object.values(StaffStatus).join(', ')}.`,
+  })
+  status: StaffStatus;
 
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  @OneToMany(() => WorkSchedule, (workSchedule) => workSchedule.staff)
+  workSchedules: WorkSchedule[];
 }

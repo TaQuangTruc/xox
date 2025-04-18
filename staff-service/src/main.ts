@@ -1,24 +1,31 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { BadRequestException, ValidationPipe } from '@nestjs/common';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { BadRequestException, HttpException, HttpStatus, ValidationPipe } from '@nestjs/common';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
+      forbidNonWhitelisted: true,
       transform: true,
-      exceptionFactory: (errors) => {
-        const errorMessages = errors.flatMap((err) =>
-          Object.values(err.constraints || {}),
+      exceptionFactory: (validationErrors) => {
+        const formatted = validationErrors.map((err) => ({
+          field: err.property,
+          errors: Object.values(err.constraints || {}),
+        }));
+        return new HttpException(
+          {
+            message: 'Validation failed',
+            errors: formatted,
+          },
+          HttpStatus.BAD_REQUEST,
         );
-        return new BadRequestException({
-          status: 'error',
-          message: 'Validation failed',
-          errors: errorMessages,
-        });
       },
     }),
   );
@@ -29,7 +36,7 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
-  app.useGlobalFilters(new HttpExceptionFilter());
+
   const port = 3002;
   await app.listen(port);
 }

@@ -1,46 +1,43 @@
-// src/common/filters/http-exception.filter.ts
-
 import {
-  ExceptionFilter,
-  Catch,
   ArgumentsHost,
+  Catch,
+  ExceptionFilter,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
 @Catch()
-export class HttpExceptionFilter implements ExceptionFilter {
-  catch(exception: any, host: ArgumentsHost) {
+export class AllExceptionsFilter implements ExceptionFilter {
+  catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
 
-    const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let responseStatus = 'error';
+    let message = 'Internal server error';
+    let errors: any[] = [];
 
-    const exceptionResponse = exception.getResponse();
+    if (exception instanceof HttpException) {
+      const res = exception.getResponse();
+      status = exception.getStatus();
+      responseStatus = status === HttpStatus.BAD_REQUEST ? 'fail' : 'error';
 
-    // Nếu exception đã là object với status/message/errors thì giữ nguyên
-    if (
-      typeof exceptionResponse === 'object' &&
-      exceptionResponse !== null &&
-      'status' in exceptionResponse &&
-      'message' in exceptionResponse
-    ) {
-      return response.status(status).json(exceptionResponse);
+      if (typeof res === 'object' && res !== null) {
+        const obj = res as any;
+        message = obj.message || message;
+        errors = obj.errors || [];
+      } else {
+        message = res as string;
+      }
     }
 
-    // Trường hợp fallback
-    return response.status(status).json({
-      status: 'error',
-      message:
-        (typeof exceptionResponse === 'string'
-          ? exceptionResponse
-          : exception.message) || 'Internal server error',
-      errors: [],
+    response.status(status).json({
+      status: responseStatus,
+      message,
+      data: [],
+      meta: undefined,
+      errors,
     });
   }
 }

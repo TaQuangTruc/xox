@@ -1,45 +1,26 @@
-import {
-  IsDateString,
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  MaxLength,
-} from 'class-validator';
-import { ShiftType } from 'src/common/enums';
+// create-work-schedule.dto.ts
 
-export class CreateScheduleDto {
-  @IsNotEmpty({ message: 'ID nhân viên không được để trống' })
-  @IsString({ message: 'ID nhân viên phải là chuỗi' })
-  staffId: string;
+import { IsString, IsNotEmpty, IsEnum, MaxLength } from 'class-validator';
+import { RepeatType } from 'src/common/enums';
 
-  @IsNotEmpty({ message: 'Thời gian bắt đầu không được để trống' })
-  @IsDateString(
-    {},
-    { message: 'Thời gian bắt đầu phải có định dạng hợp lệ (ISO)' },
-  )
-  startTime: string;
+export class CreateWorkScheduleDto {
+  @IsNotEmpty({ message: 'Giờ bắt đầu không được để trống' })
+  // TODO: @IsTime({ message: 'Giờ bắt đầu phải có định dạng hợp lệ (HH:MM:SS)' })
+  startTime: string; // Giờ bắt đầu
 
-  @IsNotEmpty({ message: 'Thời gian kết thúc không được để trống' })
-  @IsDateString(
-    {},
-    { message: 'Thời gian kết thúc phải có định dạng hợp lệ (ISO)' },
-  )
-  endTime: string;
+  @IsNotEmpty({ message: 'Giờ kết thúc không được để trống' })
+  //TODO: @IsTime({ message: 'Giờ kết thúc phải có định dạng hợp lệ (HH:MM:SS)' })
+  endTime: string; // Giờ kết thúc
 
-  @IsNotEmpty({ message: 'Loại ca không được để trống' })
-  @IsEnum(ShiftType, {
-    message: 'Loại ca phải là Morning, Afternoon, Evening, Night hoặc Off',
+  @IsNotEmpty({ message: 'Nội dung công việc không được để trống' })
+  @MaxLength(500, {
+    message: 'Nội dung công việc không được vượt quá 500 ký tự',
   })
-  shiftType: ShiftType;
+  title: string; // Nội dung công việc
 
-  @IsOptional()
-  @IsString({ message: 'Khoa phải là chuỗi' })
-  @MaxLength(50, { message: 'Khoa không được vượt quá 50 ký tự' })
-  department?: string;
+  @IsEnum(RepeatType, { message: 'Loại lặp lại không hợp lệ' })
+  repeatType: RepeatType; // Loại lặp lại
 
-  @IsOptional()
-  @IsString({ message: 'Ghi chú phải là chuỗi' })
-  @MaxLength(200, { message: 'Ghi chú không được vượt quá 200 ký tự' })
-  note?: string;
+  @IsNotEmpty({ message: 'Nơi làm việc không được để trống' })
+  location: string; // Nơi làm việc
 }

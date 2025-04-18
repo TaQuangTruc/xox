@@ -2,7 +2,8 @@ import { ConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { DB_HOST, DB_PASS, DB_PORT, DB_USER, DB_NAME } from 'src/common/env';
 import { Staff } from './entities/staff.entity';
-import { Schedule } from './entities/schedule.entity';
+import { WorkSchedule } from './entities/work-schedule.entity';
+//import { Schedule } from './entities/work-schedule.entity';
 
 export const typeOrmConfig = async (
   configService: ConfigService,
@@ -13,6 +14,6 @@ export const typeOrmConfig = async (
   username: DB_USER || 'admin',
   password: DB_PASS || 'admin',
   database: DB_NAME || 'blog-cooking',
-  entities: [Staff, Schedule],
+  entities: [Staff, WorkSchedule],
   synchronize: true,
 });
