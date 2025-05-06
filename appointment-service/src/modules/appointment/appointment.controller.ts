@@ -24,7 +24,7 @@ export class AppointmentController {
     return this.appointmentService.create(createDto);
   }
 
-  @Get()
+  @Post('search')
   quickSearch(@Body() quickSearchDto: QuickSearchDto) {
     return this.appointmentService.quickSearch(quickSearchDto);
   }

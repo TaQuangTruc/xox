@@ -1,56 +1,70 @@
 import {
-  IsDateString,
-  IsEmail,
+  IsString,
   IsEnum,
   IsOptional,
   IsPhoneNumber,
-  IsString,
-  MaxLength,
+  IsEmail,
+  IsDateString,
+  IsNotEmpty,
+  ValidateIf,
+  Length,
 } from 'class-validator';
-import { Role, Specialty } from 'src/common/enums';
+import { StaffRole, StaffSpecialty, StaffStatus } from 'src/common/enums';
 
 export class UpdateStaffDto {
+  @IsString({ message: 'First name must be a string.' })
   @IsOptional()
-  @IsString({ message: 'Họ phải là chuỗi' })
-  @MaxLength(50, { message: 'Họ không được vượt quá 50 ký tự' })
-  lastName?: string;
+  firstname?: string;
 
+  @IsString({ message: 'Last name must be a string.' })
   @IsOptional()
-  @IsString({ message: 'Tên phải là chuỗi' })
-  @MaxLength(50, { message: 'Tên không được vượt quá 50 ký tự' })
-  firstName?: string;
+  lastname?: string;
 
-  @IsOptional()
-  @IsEnum(Role, {
-    message: 'Vai trò phải là Doctor, Nurse, Admin hoặc Technician',
+  @IsEnum(StaffRole, {
+    message: 'Role must be one of the following: DOCTOR, NURSE, ADMIN.',
   })
-  role?: Role;
-
   @IsOptional()
-  @IsEnum(Specialty, {
-    message: 'Chuyên môn phải là Nội, Ngoại, Nhi, Sản, Tim mạch hoặc Khác',
-  })
-  specialty?: Specialty;
+  role?: StaffRole;
 
-  @IsOptional()
-  @IsString({ message: 'Số giấy phép hành nghề phải là chuỗi' })
-  @MaxLength(50, {
-    message: 'Số giấy phép hành nghề không được vượt quá 50 ký tự',
+  @IsString({
+    message: 'Identity number (CCCD/CMND/Hộ chiếu) must be a string.',
   })
+  @IsOptional()
+  identityNumber?: string;
+
+  @ValidateIf((o) => o.role === StaffRole.Doctor)
+  @IsOptional()
+  @IsEnum(StaffSpecialty, {
+    message:
+      'Specialty must be one of the following: CARDIOLOGIST, DERMATOLOGIST, PEDIATRICIAN.',
+  })
+  specialty?: StaffSpecialty;
+
+  @IsString({ message: 'License number must be a string.' })
+  @IsOptional()
   licenseNumber?: string;
 
+  @Length(10, 15, {
+    message: 'Phone number must be between 10 and 15 characters',
+  })
   @IsOptional()
-  @IsPhoneNumber('VN', { message: 'Số điện thoại phải hợp lệ ở Việt Nam' })
   phoneNumber?: string;
 
+  @IsEmail({}, { message: 'Email must be a valid email address.' })
   @IsOptional()
-  @IsEmail({}, { message: 'Email không hợp lệ' })
   email?: string;
 
-  @IsOptional()
   @IsDateString(
     {},
-    { message: 'Ngày tuyển dụng phải có định dạng hợp lệ (YYYY-MM-DD)' },
+    { message: 'Hire date must be a valid date in the format DD/MM/YYYY.' },
   )
+  @IsOptional()
   hireDate?: string;
+
+  @IsEnum(StaffStatus, {
+    message:
+      'Status must be one of the following: ACTIVE, INACTIVE, SUSPENDED.',
+  })
+  @IsOptional()
+  status?: StaffStatus;
 }

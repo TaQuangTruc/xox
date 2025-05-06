@@ -7,12 +7,16 @@ import { UpdateStaffDto } from './dto/updateStaff.dto';
 export class StaffService {
   constructor(private readonly staffRepository: StaffRepository) {}
 
-  async create(dto: CreateStaffDto){
+  async create(dto: CreateStaffDto) {
     return await this.staffRepository.create(dto);
   }
 
   async findAll() {
-    return await this.staffRepository.findAll();
+    const response = await this.staffRepository.findAll();
+    return {
+      message: response?.message,
+      data: response?.data,
+    };
   }
 
   async findOne(id: string) {
@@ -25,5 +29,9 @@ export class StaffService {
 
   async remove(id: string) {
     return await this.staffRepository.remove(id);
+  }
+
+  async removeSchedule(id: string) {
+    return await this.staffRepository.removeSchedule(id);
   }
 }

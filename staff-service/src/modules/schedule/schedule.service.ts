@@ -12,7 +12,6 @@ import { Staff } from 'src/database/entities/staff.entity';
 import { QuickSearchWorkScheduleDto } from './dto/quick-search.dto';
 import * as dayjs from 'dayjs';
 
-
 @Injectable()
 export class WorkScheduleService {
   constructor(
@@ -21,7 +20,7 @@ export class WorkScheduleService {
 
     @InjectRepository(Staff)
     private readonly staffRepo: Repository<Staff>,
-  ) {}
+  ) { }
 
   async create(staffId: string, dto: CreateWorkScheduleDto) {
     const staff = await this.staffRepo.findOne({ where: { id: staffId } });
@@ -47,6 +46,7 @@ export class WorkScheduleService {
 
     await this.workScheduleRepo.save(schedule);
 
+    console.log("Tạo lịch thành công")
     return {
       message: 'Tạo lịch thành công',
       data: schedule,
@@ -137,30 +137,65 @@ export class WorkScheduleService {
     try {
       const { fromTime, toTime } = dto;
 
-      // TODO: Parse định dạng 'HH:mm DD/MM/YYYY' sang ISO để so sánh
-      // const from = dayjs(fromTime, 'HH:mm DD/MM/YYYY', true);
-      // const to = dayjs(toTime, 'HH:mm DD/MM/YYYY', true);
-    
-      // if (!from.isValid() || !to.isValid()) {
-      //   throw new BadRequestException('fromTime hoặc toTime không đúng định dạng HH:mm DD/MM/YYYY');
-      // }
+      let from: Date | undefined;
+      let to: Date | undefined;
 
-      const shedules = await this.workScheduleRepo.find({
-        where: {
-          staffId: staffId,
-          // startTime: Raw((alias) => `${alias} >= :from`, { from }),
-          // endTime: Raw((alias) => `${alias} <= :to`, { to }),
-        },
-        // relations: ['staff'],
-        order: { startTime: 'ASC' },
+      const whereConditions: any = {
+        staffId: staffId,
+      };
+
+      if (fromTime) {
+        const parsedFrom = dayjs(fromTime, 'HH:mm DD/MM/YYYY', true);
+        if (!parsedFrom.isValid()) {
+          throw new BadRequestException('fromTime không đúng định dạng HH:mm DD/MM/YYYY');
+        }
+        from = parsedFrom.toDate();
+        whereConditions.scheduleDate = Raw((alias) => `${alias} >= :from`, { from });
+      }
+
+      if (toTime) {
+        const parsedTo = dayjs(toTime, 'HH:mm DD/MM/YYYY', true);
+        if (!parsedTo.isValid()) {
+          throw new BadRequestException('toTime không đúng định dạng HH:mm DD/MM/YYYY');
+        }
+        to = parsedTo.toDate();
+
+        if (whereConditions.scheduleDate) {
+          whereConditions.scheduleDate = Raw(
+            (alias) => `${alias} BETWEEN :from AND :to`,
+            { from, to }
+          );
+        } else {
+          whereConditions.scheduleDate = Raw((alias) => `${alias} <= :to`, { to });
+        }
+      }
+
+      const schedules = await this.workScheduleRepo.find({
+        where: whereConditions,
+        order: { scheduleDate: 'ASC', startTime: 'ASC' },
+      });
+
+      const formattedSchedules = schedules.map((schedule) => {
+        const startDateTimeStr = `${schedule.scheduleDate} ${schedule.startTime}`;
+        const endDateTimeStr = `${schedule.scheduleDate} ${schedule.endTime}`;
+
+        return {
+          id: schedule.id,
+          title: schedule.title,
+          start: dayjs(startDateTimeStr).format('YYYY-MM-DD HH:mm'),
+          end: dayjs(endDateTimeStr).format('YYYY-MM-DD HH:mm'),
+        };
       });
 
       return {
-        messgae: 'Lấy danh sách việc làm của nhân viên thành công',
-        data: shedules,
+        status: 'successful',
+        message: 'Lấy danh sách việc làm của nhân viên thành công',
+        data: formattedSchedules,
+        errors: null,
       };
     } catch (error) {
       console.log(error);
+      throw new BadRequestException('Đã xảy ra lỗi khi tìm kiếm');
     }
   }
 }

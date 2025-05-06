@@ -13,6 +13,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 
+    console.log(exception);
+
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let responseStatus = 'error';
     let message = 'Internal server error';

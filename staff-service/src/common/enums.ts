@@ -34,6 +34,7 @@ export enum FieldOperator {
 }
 
 export enum RepeatType {
+  NONE = 'none',
   DAILY = 'daily',
   WEEKLY = 'weekly',
   MONTHLY = 'monthly',

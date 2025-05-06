@@ -1,84 +1,79 @@
+// src/modules/staff/staff.repository.ts
 import { HttpService } from '@nestjs/axios';
-import {
-  Injectable,
-  BadRequestException,
-  InternalServerErrorException,
-} from '@nestjs/common';
-import { lastValueFrom } from 'rxjs';
-import { Staff } from './staff.interface';
-import { AxiosError } from 'axios';
-import { ResponseHandlerService } from 'src/common/utils/response-handler.service';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { CreateStaffDto } from './dto/createStaff.dto';
 import { UpdateStaffDto } from './dto/updateStaff.dto';
+import { CreateWorkScheduleDto } from './dto/create-schedule.dto';
+import { BaseRepository } from 'src/common/base-repository';
 
 @Injectable()
-export class StaffRepository {
-  constructor(
-    private readonly httpService: HttpService,
-    private readonly handlerResponseService: ResponseHandlerService,
-  ) {}
+export class StaffRepository extends BaseRepository {
+  constructor(private readonly httpService: HttpService) {
+    super();
+  }
 
   private readonly baseUrl = 'http://localhost:3002/staffs';
 
-  async create(createDto: CreateStaffDto): Promise<Staff> {
+  create(dto: CreateStaffDto) {
+    return this.request(
+      () => this.httpService.post(this.baseUrl, dto),
+      'create',
+    );
+  }
+
+  findAll() {
+    return this.request(
+      () => this.httpService.post(`${this.baseUrl}/search`),
+      'findAll',
+    );
+  }
+
+  async findOne(id: string) {
     try {
-      const res$ = this.httpService.post<ApiResponse<Staff>>(
-        this.baseUrl,
-        createDto,
+      return await this.request(
+        () => this.httpService.get(`${this.baseUrl}/${id}`),
+        'findOne',
       );
-      const res = await lastValueFrom(res$);
-      return this.handlerResponseService.handleResponse(res.data);
     } catch (error) {
-      this.handlerResponseService.handleAxiosError(error);
+      if (error instanceof BadRequestException && error.message.includes('404'))
+        return null;
+      throw error;
     }
   }
 
-  async findAll(): Promise<Staff[]> {
-    try {
-      const res$ = this.httpService.get<ApiResponse<Staff[]>>(this.baseUrl);
-      const res = await lastValueFrom(res$);
-      console.log(res);
-      return this.handlerResponseService.handleResponse(res.data);
-    } catch (error) {
-      this.handlerResponseService.handleAxiosError(error);
-    }
+  update(id: string, dto: UpdateStaffDto) {
+    return this.request(
+      () => this.httpService.patch(`${this.baseUrl}/${id}`, dto),
+      'update',
+    );
   }
 
-  async findOne(id: string): Promise<Staff | null> {
-    try {
-      const res$ = this.httpService.get<ApiResponse<Staff>>(
-        `${this.baseUrl}/${id}`,
-      );
-      const res = await lastValueFrom(res$);
-      return this.handlerResponseService.handleResponse(res.data);
-    } catch (error) {
-      if (error.response?.status === 404) return null;
-      this.handlerResponseService.handleAxiosError(error);
-    }
+  remove(id: string) {
+    return this.request(
+      () => this.httpService.delete(`${this.baseUrl}/${id}`),
+      'remove',
+    );
   }
 
-  async update(id: string, updateDto: UpdateStaffDto): Promise<Staff> {
-    try {
-      const res$ = this.httpService.patch<ApiResponse<Staff>>(
-        `${this.baseUrl}/${id}`,
-        updateDto,
-      );
-      const res = await lastValueFrom(res$);
-      return this.handlerResponseService.handleResponse(res.data);
-    } catch (error) {
-      this.handlerResponseService.handleAxiosError(error);
-    }
+  findOneAvaiable(payload: any) {
+    return this.request(
+      () => this.httpService.post(`${this.baseUrl}/available`, payload),
+      'findOneAvaiable',
+    );
   }
 
-  async remove(id: string): Promise<void> {
-    try {
-      const res$ = this.httpService.delete<ApiResponse<null>>(
-        `${this.baseUrl}/${id}`,
-      );
-      const res = await lastValueFrom(res$);
-      this.handlerResponseService.handleResponse(res.data);
-    } catch (error) {
-      this.handlerResponseService.handleAxiosError(error);
-    }
+  createScheduleForStaff(staffId: string, dto: CreateWorkScheduleDto) {
+    return this.request(
+      () =>
+        this.httpService.post(`${this.baseUrl}/work-schedule/${staffId}`, dto),
+      'createScheduleForStaff',
+    );
+  }
+
+  removeSchedule(id: string) {
+    return this.request(
+      () => this.httpService.delete(`http://localhost:3002/work-schedules/${id}`),
+      'remove',
+    );
   }
 }

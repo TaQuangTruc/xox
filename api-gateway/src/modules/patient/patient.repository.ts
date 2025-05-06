@@ -7,77 +7,56 @@ import {
 import { lastValueFrom } from 'rxjs';
 import { CreatePatientDto } from './dto/createPatient.dto';
 import { UpdatePatientDto } from './dto/updatePatient.dto';
-import { Patient } from './patient.interface';
 import { AxiosError } from 'axios';
-import { ResponseHandlerService } from 'src/common/utils/response-handler.service';
 
 @Injectable()
 export class PatientRepository {
-  constructor(
-    private readonly httpService: HttpService,
-    private readonly handlerResponseService: ResponseHandlerService,
-  ) {}
+  constructor(private readonly httpService: HttpService) {}
 
-  private readonly baseUrl = 'http://localhost:3001/patients';
+  private readonly baseUrl = 'http://localhost:3012/patients';
 
-  async create(createDto: CreatePatientDto): Promise<Patient> {
+  async create(createDto: CreatePatientDto) {
     try {
-      const res$ = this.httpService.post<ApiResponse<Patient>>(
-        this.baseUrl,
-        createDto,
-      );
+      const res$ = this.httpService.post(this.baseUrl, createDto);
       const res = await lastValueFrom(res$);
-      return this.handlerResponseService.handleResponse(res.data);
-    } catch (error) {
-      this.handlerResponseService.handleAxiosError(error);
-    }
+
+      console.log(res);
+    } catch (error) {}
   }
 
-  async findAll(): Promise<Patient[]> {
+  async findAll() {
     try {
-      const res$ = this.httpService.get<ApiResponse<Patient[]>>(this.baseUrl);
+      const res$ = this.httpService.get(this.baseUrl);
       const res = await lastValueFrom(res$);
-      return this.handlerResponseService.handleResponse(res.data);
-    } catch (error) {
-      this.handlerResponseService.handleAxiosError(error);
-    }
+
+      console.log(res.data);
+
+      return res;
+    } catch (error) {}
   }
 
-  async findOne(id: string): Promise<Patient | null> {
+  async findOne(id: string) {
     try {
-      const res$ = this.httpService.get<ApiResponse<Patient>>(
-        `${this.baseUrl}/${id}`,
-      );
+      const res$ = this.httpService.get(`${this.baseUrl}/${id}`);
       const res = await lastValueFrom(res$);
-      return this.handlerResponseService.handleResponse(res.data);
     } catch (error) {
       if (error.response?.status === 404) return null;
-      this.handlerResponseService.handleAxiosError(error);
     }
   }
 
-  async update(id: string, updateDto: UpdatePatientDto): Promise<Patient> {
+  async update(id: string, updateDto: UpdatePatientDto) {
     try {
-      const res$ = this.httpService.patch<ApiResponse<Patient>>(
-        `${this.baseUrl}/${id}`,
-        updateDto,
-      );
+      const res$ = this.httpService.patch(`${this.baseUrl}/${id}`, updateDto);
       const res = await lastValueFrom(res$);
-      return this.handlerResponseService.handleResponse(res.data);
-    } catch (error) {
-      this.handlerResponseService.handleAxiosError(error);
-    }
+    } catch (error) {}
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string) {
     try {
       const res$ = this.httpService.delete<ApiResponse<null>>(
         `${this.baseUrl}/${id}`,
       );
       const res = await lastValueFrom(res$);
-      this.handlerResponseService.handleResponse(res.data);
-    } catch (error) {
-      this.handlerResponseService.handleAxiosError(error);
-    }
+    } catch (error) {}
   }
 }

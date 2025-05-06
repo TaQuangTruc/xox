@@ -17,6 +17,10 @@ export class Staff {
   @IsUUID(4, { message: 'ID must be a valid UUID.' })
   id: string;
 
+  @Column({ unique: true })
+  @IsString({ message: 'Staff code must be a string.' })
+  code: string;
+
   @Column()
   @IsString({ message: 'First name must be a string.' })
   firstname: string;

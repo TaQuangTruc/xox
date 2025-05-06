@@ -37,7 +37,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  const port = 3002;
+  const port = 3012;
   await app.listen(port);
 }
 

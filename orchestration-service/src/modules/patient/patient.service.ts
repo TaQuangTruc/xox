@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PatientRepository } from './patient.repository';
 import { CreatePatientDto } from './dto/createPatient.dto';
 import { UpdatePatientDto } from './dto/updatePatient.dto';
-import { Patient } from './patient.interface';
 
 @Injectable()
 export class PatientService {

@@ -7,6 +7,7 @@ import {
   IsDateString,
   IsNotEmpty,
   ValidateIf,
+  Length,
 } from 'class-validator';
 import { StaffRole, StaffSpecialty, StaffStatus } from 'src/common/enums';
 // import { StaffRole, StaffSpecialty, StaffStatus } from '../'
@@ -44,10 +45,10 @@ export class CreateStaffDto {
   @IsNotEmpty({ message: 'License number cannot be empty.' })
   licenseNumber: string;
 
-  @IsPhoneNumber('VN', {
-    message: 'Phone number must be a valid phone number.',
+  @IsNotEmpty({ message: 'Phone number is required' })
+  @Length(10, 15, {
+    message: 'Phone number must be between 10 and 15 characters',
   })
-  @IsNotEmpty({ message: 'Phone number cannot be empty.' })
   phoneNumber: string;
 
   @IsEmail({}, { message: 'Email must be a valid email address.' })
@@ -59,7 +60,4 @@ export class CreateStaffDto {
     { message: 'Hire date must be a valid date in the format DD/MM/YYYY.' },
   )
   hireDate: string;
-
-  // @IsEnum(StaffStatus, { message: 'Status must be one of the following: ACTIVE, INACTIVE, SUSPENDED.' })
-  // status: StaffStatus;
 }
