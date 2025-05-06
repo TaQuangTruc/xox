@@ -1,12 +1,11 @@
 import {
   Injectable,
-  ConflictException,
-  NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Appointment } from 'src/database/entities/appointment.entity';
 import { Repository } from 'typeorm';
+import { Appointment } from 'src/database/entities/appointment.entity';
 import { CreateAppointmentDto } from './dto/createAppointment.dto';
 import { UpdateAppointmentDto } from './dto/updateAppointment.dto';
 import { FieldSearchDto, QuickSearchDto } from './dto/quickSearch.dto';
@@ -15,25 +14,25 @@ import { FieldSearchDto, QuickSearchDto } from './dto/quickSearch.dto';
 export class AppointmentService {
   constructor(
     @InjectRepository(Appointment)
-    private repository: Repository<Appointment>,
+    private readonly repository: Repository<Appointment>,
   ) {}
 
-  async create(createDto: CreateAppointmentDto) {
+  async create(dto: CreateAppointmentDto) {
     try {
-      const appointment = this.repository.create(createDto);
-
+      const appointment = this.repository.create(dto);
       await this.repository.save(appointment);
+
       return {
         message: 'Tạo lịch hẹn thành công',
         data: appointment,
       };
     } catch (error) {
-      throw new BadRequestException({
+      throw new InternalServerErrorException({
         message: 'Xảy ra lỗi khi tạo lịch hẹn mới',
         errors: [
           {
             field: 'appointment',
-            errors: error,
+            errors: [error?.message || 'Không xác định'],
           },
         ],
       });
@@ -42,56 +41,47 @@ export class AppointmentService {
 
   async findOne(id: string) {
     const appointment = await this.repository.findOne({ where: { id } });
+
     if (!appointment) {
       throw new BadRequestException({
-        message: 'Appointment not found',
+        message: 'Không tìm thấy lịch hẹn',
         errors: [
-          {
-            field: 'id',
-            errors: [`Không tồn tại lịch hẹn với id: ${id}`],
-          },
+          { field: 'id', errors: [`Không tồn tại lịch hẹn với id: ${id}`] },
         ],
       });
     }
+
     return {
       message: 'Lấy thông tin lịch hẹn thành công',
       data: appointment,
     };
   }
 
-  async update(id: string, updateDto: UpdateAppointmentDto) {
+  async update(id: string, dto: UpdateAppointmentDto) {
     const appointment = await this.repository.findOne({ where: { id } });
 
     if (!appointment) {
       throw new BadRequestException({
-        message: 'Appointment not found',
+        message: 'Không tìm thấy lịch hẹn',
         errors: [
-          {
-            field: 'id',
-            errors: [`Không tồn tại lịch hẹn với id: ${id}`],
-          },
+          { field: 'id', errors: [`Không tồn tại lịch hẹn với id: ${id}`] },
         ],
       });
     }
 
-    Object.assign(appointment, updateDto);
-
     try {
+      Object.assign(appointment, dto);
       await this.repository.save(appointment);
 
       return {
         message: 'Cập nhật thông tin lịch hẹn thành công',
-        appointment,
+        data: appointment,
       };
     } catch (error) {
-      console.log(error);
-      throw new BadRequestException({
-        message: 'Xảy ra lỗi khi cập nhật thông tin lịch hẹn',
+      throw new InternalServerErrorException({
+        message: 'Lỗi khi cập nhật lịch hẹn',
         errors: [
-          {
-            field: 'update',
-            errors: [`Xảy ra lỗi khi update`],
-          },
+          { field: 'update', errors: [error?.message || 'Không xác định'] },
         ],
       });
     }
@@ -102,12 +92,9 @@ export class AppointmentService {
 
     if (!appointment) {
       throw new BadRequestException({
-        message: 'Appointment not found',
+        message: 'Không tìm thấy lịch hẹn',
         errors: [
-          {
-            field: 'id',
-            errors: [`Không tồn tại lịch hẹn với id: ${id}`],
-          },
+          { field: 'id', errors: [`Không tồn tại lịch hẹn với id: ${id}`] },
         ],
       });
     }
@@ -121,79 +108,36 @@ export class AppointmentService {
   }
 
   async quickSearch(query: QuickSearchDto) {
-    const nameEntity = 'appointment';
+    const entityAlias = 'appointment';
     const { quickSearch, pagination } = query;
-    const { page = 1, limit = 10 } = pagination || {}; // Phân trang mặc định là 1 và 10 nếu không có
+    const { page = 1, limit = 10 } = pagination || {};
 
-    // Kiểm tra các tham số đầu vào
-    // if (!quickSearch) {
-    //   throw new BadRequestException({
-    //     message: 'QuickSearch not defined',
-    //     errors: [
-    //       {
-    //         field: 'quickSearch',
-    //         errors: [`QuickSearch không tồn tại`],
-    //       },
-    //     ],
-    //   });
-    // }
+    const validConditions = (quickSearch ?? []).filter(
+      (s: FieldSearchDto) => s.fieldname && s.fieldop && s.fieldvalue,
+    );
 
-    // Lọc các search conditions hợp lệ (fieldname, fieldop, fieldvalue không rỗng)
-    const validSearchConditions =
-      quickSearch?.filter(
-        (search: FieldSearchDto) =>
-          search.fieldname && search.fieldvalue && search.fieldop,
-      ) || [];
+    const qb = this.repository.createQueryBuilder(entityAlias);
 
-    // Nếu không có điều kiện tìm kiếm hợp lệ thì không thêm bất kỳ điều kiện nào vào query
-    const queryBuilder = this.repository.createQueryBuilder(nameEntity);
+    validConditions.forEach((cond, i) => {
+      const param = `value${i}`;
+      const field = `${entityAlias}.${cond.fieldname}`;
+      const val = cond.fieldvalue.trim().toLowerCase();
 
-    // Nếu không có valid search conditions, trả về toàn bộ danh sách mà không có điều kiện
-    if (validSearchConditions?.length === 0) {
-      queryBuilder.skip((page - 1) * limit).take(limit); // Phân trang
-      const result = await queryBuilder.getMany();
-      const total = await queryBuilder.getCount();
-
-      return {
-        message: 'Lấy danh sách lịch hẹn thành công',
-        data: result,
-        meta: {
-          pagination: {
-            page,
-            limit,
-            totalItems: total,
-            totalPages: Math.ceil(total / limit),
-          },
-        },
-      };
-    }
-
-    // Thêm các điều kiện tìm kiếm động chỉ khi có điều kiện hợp lệ
-    validSearchConditions.forEach((search: FieldSearchDto) => {
-      const { fieldname, fieldop, fieldvalue } = search;
-
-      if (fieldop === 'LIKE') {
-        queryBuilder.andWhere(`${nameEntity}.${fieldname} LIKE :fieldvalue`, {
-          fieldvalue: `%${fieldvalue}%`,
-        });
-      } else if (fieldop === 'EQUAL') {
-        queryBuilder.andWhere(`${nameEntity}.${fieldname} = :fieldvalue`, {
-          fieldvalue,
-        });
+      if (cond.fieldop === 'LIKE') {
+        qb.andWhere(`LOWER(${field}) LIKE :${param}`, { [param]: `%${val}%` });
+      } else if (cond.fieldop === 'EQUAL') {
+        qb.andWhere(`LOWER(${field}) = :${param}`, { [param]: val });
       }
     });
 
-    // Phân trang
-    queryBuilder.skip((page - 1) * limit).take(limit);
+    qb.skip((page - 1) * limit).take(limit);
 
-    // Thực hiện tìm kiếm
     try {
-      const result = await queryBuilder.getMany();
-      const total = await queryBuilder.getCount(); // Đếm tổng số kết quả
+      const [data, total] = await Promise.all([qb.getMany(), qb.getCount()]);
 
       return {
         message: 'Lấy danh sách lịch hẹn thành công',
-        data: result,
+        data,
         meta: {
           pagination: {
             page,
@@ -204,13 +148,12 @@ export class AppointmentService {
         },
       };
     } catch (error) {
-      console.log(error);
       throw new BadRequestException({
         message: 'Xảy ra lỗi khi tìm lịch hẹn',
         errors: [
           {
             field: 'quickSearch',
-            errors: [`Xảy ra lỗi khi quickSearch`],
+            errors: [error?.message || 'Không xác định'],
           },
         ],
       });

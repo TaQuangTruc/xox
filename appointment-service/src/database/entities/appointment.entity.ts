@@ -1,10 +1,4 @@
-import {
-  Entity,
-  Column,
-  PrimaryGeneratedColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 import {
   IsEnum,
   IsNotEmpty,
@@ -12,8 +6,9 @@ import {
   IsString,
   IsDateString,
   Length,
+  Matches,
 } from 'class-validator';
-import { Gender, StaffSpecialty, Session } from 'src/common/enums';
+import { Gender, StaffSpecialty, AppointmentStatus } from 'src/common/enums';
 
 @Entity('appointment')
 export class Appointment {
@@ -64,15 +59,31 @@ export class Appointment {
   @IsDateString({}, { message: 'Invalid examination date format' })
   examinationDate: Date;
 
-  @Column({
-    type: 'enum',
-    enum: Session,
+  @Column()
+  @IsNotEmpty({ message: 'Examination time is required' })
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+    message: 'Examination time must be in HH:mm format (24-hour)',
   })
-  @IsEnum(Session, { message: 'Invalid examination session' })
-  examinationSession: Session;
+  examinationTime: string;
 
   @Column()
   @IsNotEmpty({ message: 'Description is required' })
   @IsString({ message: 'Description must be a string' })
   description: string;
+
+  @Column({ nullable: true })
+  @IsString({ message: 'Doctor code must be a string' })
+  doctorCode?: string;
+
+  @Column({ nullable: true })
+  @IsString({ message: 'Doctor name must be a string' })
+  doctorName?: string;
+
+  @Column({
+    type: 'enum',
+    enum: AppointmentStatus,
+    default: AppointmentStatus.PENDING,
+  })
+  @IsEnum(AppointmentStatus, { message: 'Invalid appointment status' })
+  status: AppointmentStatus;
 }

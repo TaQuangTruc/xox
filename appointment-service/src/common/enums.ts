@@ -23,3 +23,10 @@ export enum Session {
   AFTERNOON = 'Afternoon',
   EVENING = 'Evening',
 }
+
+
+export enum AppointmentStatus {
+  PENDING = 'Chờ khám',
+  DONE = 'Đã khám',
+  CANCEL = 'Đã hủy',
+}
