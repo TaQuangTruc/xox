@@ -7,6 +7,7 @@ import {
   IsDateString,
   IsNotEmpty,
   ValidateIf,
+  Length,
 } from 'class-validator';
 import { StaffRole, StaffSpecialty, StaffStatus } from 'src/common/enums';
 
@@ -43,8 +44,8 @@ export class UpdateStaffDto {
   @IsOptional()
   licenseNumber?: string;
 
-  @IsPhoneNumber('VN', {
-    message: 'Phone number must be a valid phone number.',
+  @Length(10, 15, {
+    message: 'Phone number must be between 10 and 15 characters',
   })
   @IsOptional()
   phoneNumber?: string;

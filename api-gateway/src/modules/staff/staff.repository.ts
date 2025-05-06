@@ -1,84 +1,76 @@
 import { HttpService } from '@nestjs/axios';
 import {
   Injectable,
-  BadRequestException,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
-import { lastValueFrom } from 'rxjs';
-import { Staff } from './staff.interface';
-import { AxiosError } from 'axios';
-import { ResponseHandlerService } from 'src/common/utils/response-handler.service';
+import { lastValueFrom, Observable } from 'rxjs';
+import { AxiosError, AxiosResponse } from 'axios';
 import { CreateStaffDto } from './dto/createStaff.dto';
 import { UpdateStaffDto } from './dto/updateStaff.dto';
+import { CreateWorkScheduleDto } from './dto/create-schedule.dto';
+import { QuickSearchDto } from './dto/quickSearch.dto';
 
 @Injectable()
 export class StaffRepository {
-  constructor(
-    private readonly httpService: HttpService,
-    private readonly handlerResponseService: ResponseHandlerService,
-  ) {}
-
+  private readonly logger = new Logger(StaffRepository.name);
   private readonly baseUrl = 'http://localhost:3002/staffs';
 
-  async create(createDto: CreateStaffDto): Promise<Staff> {
+  constructor(private readonly httpService: HttpService) {}
+
+  private async handleRequest<T>(
+    observable: Observable<AxiosResponse<T>>,
+  ): Promise<T | null> {
     try {
-      const res$ = this.httpService.post<ApiResponse<Staff>>(
-        this.baseUrl,
-        createDto,
-      );
-      const res = await lastValueFrom(res$);
-      return this.handlerResponseService.handleResponse(res.data);
+      const response = await lastValueFrom(observable);
+      return response.data;
     } catch (error) {
-      this.handlerResponseService.handleAxiosError(error);
+      this.handleError(error);
+      return null;
     }
   }
 
-  async findAll(): Promise<Staff[]> {
-    try {
-      const res$ = this.httpService.get<ApiResponse<Staff[]>>(this.baseUrl);
-      const res = await lastValueFrom(res$);
-      console.log(res);
-      return this.handlerResponseService.handleResponse(res.data);
-    } catch (error) {
-      this.handlerResponseService.handleAxiosError(error);
+  private handleError(error: any) {
+    if (error instanceof AxiosError) {
+      this.logger.error(`Axios error: ${error.message}`);
+    } else {
+      this.logger.error('Unknown error', error);
     }
   }
 
-  async findOne(id: string): Promise<Staff | null> {
+  async create(createDto: CreateStaffDto) {
+    return this.handleRequest(this.httpService.post(this.baseUrl, createDto));
+  }
+
+  async search(quickSearchDto: QuickSearchDto) {
+    return this.handleRequest(
+      this.httpService.post(`${this.baseUrl}/search`, quickSearchDto || {})
+    );
+  }
+
+  async findOne(id: string) {
     try {
-      const res$ = this.httpService.get<ApiResponse<Staff>>(
-        `${this.baseUrl}/${id}`,
+      const response = await lastValueFrom(
+        this.httpService.get(`${this.baseUrl}/${id}`),
       );
-      const res = await lastValueFrom(res$);
-      return this.handlerResponseService.handleResponse(res.data);
+      return response.data;
     } catch (error) {
       if (error.response?.status === 404) return null;
-      this.handlerResponseService.handleAxiosError(error);
+      this.handleError(error);
+      return null;
     }
   }
 
-  async update(id: string, updateDto: UpdateStaffDto): Promise<Staff> {
-    try {
-      const res$ = this.httpService.patch<ApiResponse<Staff>>(
-        `${this.baseUrl}/${id}`,
-        updateDto,
-      );
-      const res = await lastValueFrom(res$);
-      return this.handlerResponseService.handleResponse(res.data);
-    } catch (error) {
-      this.handlerResponseService.handleAxiosError(error);
-    }
+  async update(id: string, updateDto: UpdateStaffDto) {
+    return this.handleRequest(
+      this.httpService.patch(`${this.baseUrl}/${id}`, updateDto),
+    );
   }
 
-  async remove(id: string): Promise<void> {
-    try {
-      const res$ = this.httpService.delete<ApiResponse<null>>(
-        `${this.baseUrl}/${id}`,
-      );
-      const res = await lastValueFrom(res$);
-      this.handlerResponseService.handleResponse(res.data);
-    } catch (error) {
-      this.handlerResponseService.handleAxiosError(error);
-    }
+  async remove(id: string): Promise<boolean> {
+    const result = await this.handleRequest(
+      this.httpService.delete(`${this.baseUrl}/${id}`),
+    );
+    return !!result;
   }
 }

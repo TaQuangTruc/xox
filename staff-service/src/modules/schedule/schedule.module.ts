@@ -8,6 +8,7 @@ import { WorkSchedule } from 'src/database/entities/work-schedule.entity';
 @Module({
   imports: [TypeOrmModule.forFeature([Staff, WorkSchedule])],
   providers: [WorkScheduleService],
+  exports: [WorkScheduleService],
   controllers: [WorkScheduleController],
 })
 export class ScheduleModule {}

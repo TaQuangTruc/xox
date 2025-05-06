@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    depends_on:
+      - patient
+      - staff
+    networks:
+      - xox-network
+    environment:
+      PATIENT_SERVICE_URL: http://patient:3001/patients
+      STAFF_SERVICE_URL: http://staff:3002/staffs
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      DB_DIALECT: ${DB_DIALECT}
+      NODE_ENV: ${NODE_ENV}
+
+  postgres:
+    image: postgres:latest
+    container_name: my-postgres
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    networks:
+      - xox-network
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  patient:
+    build:
+      context: ./patient-service
+    container_name: patient
+    ports:
+      - "3001:3001"
+    networks:
+      - xox-network
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      DB_DIALECT: ${DB_DIALECT}
+      NODE_ENV: ${NODE_ENV}
+  
+  staff:
+    build:
+      context: ./staff-service
+    container_name: staff
+    ports:
+      - "3002:3002"
+    networks:
+      - xox-network
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      DB_DIALECT: ${DB_DIALECT}
+      NODE_ENV: ${NODE_ENV}
+
+volumes:
+  pgdata:
+
+networks:
+  xox-network:
+    driver: bridge

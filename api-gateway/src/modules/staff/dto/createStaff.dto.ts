@@ -1,57 +1,63 @@
 import {
-  IsDateString,
-  IsEmail,
+  IsString,
   IsEnum,
-  IsNotEmpty,
   IsOptional,
   IsPhoneNumber,
-  IsString,
-  MaxLength,
+  IsEmail,
+  IsDateString,
+  IsNotEmpty,
+  ValidateIf,
+  Length,
 } from 'class-validator';
-import { Role, Specialty } from 'src/common/enums';
+import { StaffRole, StaffSpecialty, StaffStatus } from 'src/common/enums';
+// import { StaffRole, StaffSpecialty, StaffStatus } from '../'
 
 export class CreateStaffDto {
-  @IsNotEmpty({ message: 'Họ không được để trống' })
-  @IsString({ message: 'Họ phải là chuỗi' })
-  @MaxLength(50, { message: 'Họ không được vượt quá 50 ký tự' })
-  lastName: string;
+  @IsString({ message: 'First name is required and should be a string.' })
+  @IsNotEmpty({ message: 'First name cannot be empty.' })
+  firstname: string;
 
-  @IsNotEmpty({ message: 'Tên không được để trống' })
-  @IsString({ message: 'Tên phải là chuỗi' })
-  @MaxLength(50, { message: 'Tên không được vượt quá 50 ký tự' })
-  firstName: string;
+  @IsString({ message: 'Last name is required and should be a string.' })
+  @IsNotEmpty({ message: 'Last name cannot be empty.' })
+  lastname: string;
 
-  @IsNotEmpty({ message: 'Vai trò không được để trống' })
-  @IsEnum(Role, {
-    message: 'Vai trò phải là Doctor, Nurse, Admin hoặc Technician',
+  @IsEnum(StaffRole, {
+    message: 'Role must be one of the following: DOCTOR, NURSE, ADMIN.',
   })
-  role: Role;
+  role: StaffRole;
 
+  @IsString({
+    message:
+      'Identity number (CCCD/CMND/Hộ chiếu) is required and should be a string.',
+  })
+  @IsNotEmpty({ message: 'Identity number cannot be empty.' })
+  identityNumber: string;
+
+  @ValidateIf((o) => o.role === StaffRole.Doctor)
   @IsOptional()
-  @IsEnum(Specialty, {
-    message: 'Chuyên môn phải là Nội, Ngoại, Nhi, Sản, Tim mạch hoặc Khác',
+  @IsEnum(StaffSpecialty, {
+    message:
+      'Specialty must be one of the following: CARDIOLOGIST, DERMATOLOGIST, PEDIATRICIAN.',
   })
-  specialty?: Specialty;
+  specialty?: StaffSpecialty;
 
-  @IsOptional()
-  @IsString({ message: 'Số giấy phép hành nghề phải là chuỗi' })
-  @MaxLength(50, {
-    message: 'Số giấy phép hành nghề không được vượt quá 50 ký tự',
+  @IsString({ message: 'License number is required and should be a string.' })
+  @IsNotEmpty({ message: 'License number cannot be empty.' })
+  licenseNumber: string;
+
+  @IsNotEmpty({ message: 'Phone number is required' })
+  @Length(10, 15, {
+    message: 'Phone number must be between 10 and 15 characters',
   })
-  licenseNumber?: string;
-
-  @IsNotEmpty({ message: 'Số điện thoại không được để trống' })
-  @IsPhoneNumber('VN', { message: 'Số điện thoại phải hợp lệ ở Việt Nam' })
   phoneNumber: string;
 
-  @IsNotEmpty({ message: 'Email không được để trống' })
-  @IsEmail({}, { message: 'Email không hợp lệ' })
+  @IsEmail({}, { message: 'Email must be a valid email address.' })
+  @IsNotEmpty({ message: 'Email cannot be empty.' })
   email: string;
 
-  @IsNotEmpty({ message: 'Ngày tuyển dụng không được để trống' })
   @IsDateString(
     {},
-    { message: 'Ngày tuyển dụng phải có định dạng hợp lệ (YYYY-MM-DD)' },
+    { message: 'Hire date must be a valid date in the format DD/MM/YYYY.' },
   )
   hireDate: string;
 }

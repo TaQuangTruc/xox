@@ -10,6 +10,7 @@ import {
 import { StaffService } from './staff.service';
 import { CreateStaffDto } from './dto/createStaff.dto';
 import { UpdateStaffDto } from './dto/updateStaff.dto';
+import { QuickSearchDto } from './dto/quickSearch.dto';
 
 @Controller('staffs')
 export class StaffController {
@@ -20,9 +21,9 @@ export class StaffController {
     return this.staffService.create(dto);
   }
 
-  @Get()
-  findAll() {
-    return this.staffService.findAll();
+  @Post('search')
+  search(@Body() dto: QuickSearchDto) {
+    return this.staffService.search(dto);
   }
 
   @Get(':id')
